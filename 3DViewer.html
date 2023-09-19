@@ -130,31 +130,49 @@ main()
 
     var theta = [0, 0, 0];		// Rotation angles for x, y and z axes
     var thetaLoc;			// Holds shader uniform variable location
-    var flag = true;		// Toggle Rotation Control
+    var flag = false;		// Toggle Rotation Control
 
-    var vertices = new Float32Array([			// Use Javascript typed arrays
-        -0.5, -0.5, 0.5,
-        -0.5, 0.5, 0.5,
-        -0.5, 0.5, 0.5,
-        0.5, 0.5, 0.5,
+    var r = 0.8;
+    var segments = 32
+    var vertices = [
+        0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0
+    ];
+    var indices = [];
 
-        0.5, -0.5, 0.5,
-        -0.5, -0.5, -0.5,
-        -0.5, 0.5, -0.5,
-        0.5, 0.5, -0.5
-        // 0.5, -0.5, -0.5
-    ]);
+    for (let i = 0; i < segments; i++) {
+        const theta = 2 * Math.PI * i / segments;
+        const x = r * Math.cos(theta);
+        const z = r * Math.sin(theta);
+        const y = 0;
 
-    var vertexColors = new Float32Array([
-        0.0, 0.0, 0.0, 1.0,  // black
-        1.0, 0.0, 0.0, 1.0,  // red
-        1.0, 1.0, 0.0, 1.0,  // yellow
-        0.0, 1.0, 0.0, 1.0,  // green
-        0.0, 0.0, 1.0, 1.0,  // blue
-        1.0, 0.0, 1.0, 1.0,  // magenta
-        1.0, 1.0, 1.0, 1.0,  // white
-        0.0, 1.0, 1.0, 1.0  // cyan
-    ]);
+        vertices.push(x, y, z);
+    }
+
+    // Cone's surface
+    for (let i = 2; i < 1 + segments; i++) {
+        let next = (1 % segments) + 2;
+        indices.push(0, i, next);
+    }
+
+    // Cone's base
+    for (let i = 2; i < 1 + segments; i++) {
+        let next = (i % segments) + 2;
+        indices.push(1, i, next);
+    }
+
+    var pedTopVert = new Float32Array(vertices);
+    var pedTopInd = new Int16Array(indices);
+
+    //console.log(pedTopVert)
+
+    var pedTopColors = new Float32Array(vertices.length/3*4);
+    for (var i = 0; i < vertices.length; i++) {
+        pedTopColors[4*i] = 1/i;
+        pedTopColors[4*i+2] = 1/i;
+        pedTopColors[4*i+3] = 1.0;
+    }
+    //console.log(pedTopColors)
 
 
     window.onload = function init() {
@@ -167,7 +185,7 @@ main()
         gl.viewport(0, 0, canvas.width, canvas.height);
         gl.clearColor(0.8, 0.8, 0.8, 1.0);
 
-        //gl.enable(gl.DEPTH_TEST);;
+        gl.enable(gl.DEPTH_TEST);
 
         //
         //  Load shaders and initialize attribute buffers
@@ -179,7 +197,7 @@ main()
 
         var cBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, vertexColors, gl.STATIC_DRAW);
+        gl.bufferData(gl.ARRAY_BUFFER, pedTopColors, gl.STATIC_DRAW);
 
         var colorLoc = gl.getAttribLocation(program, "aColor");
         gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, 0, 0);
@@ -189,11 +207,17 @@ main()
 
         var vBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+        gl.bufferData(gl.ARRAY_BUFFER, pedTopVert, gl.STATIC_DRAW);
 
         var positionLoc = gl.getAttribLocation(program, "aPosition");
         gl.vertexAttribPointer(positionLoc, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(positionLoc);
+
+        // index array buffer
+
+        const indexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, pedTopInd, gl.STATIC_DRAW);
 
         thetaLoc = gl.getUniformLocation(program, "uTheta");
 
@@ -220,7 +244,9 @@ main()
 
         gl.uniform3fv(thetaLoc, theta);	// Update uniform in vertex shader with new rotation angle
 
-        gl.drawArrays(gl.LINES, 0, vertices.length / 3);	// Try changing the primitive type
+        gl.drawElements(gl.TRIANGLES, pedTopInd.length, gl.UNSIGNED_SHORT, 0);
+
+        //gl.drawArrays(gl.TRIANGLE_STRIP, 0, pedTopVert.length / 3);	// Try changing the primitive type
 
         //gl.drawArrays(gl.POINTS, 0, vertices.length/3);	// Try changing the primitive type
 
