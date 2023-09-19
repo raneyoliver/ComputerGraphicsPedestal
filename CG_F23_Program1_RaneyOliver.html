@@ -184,10 +184,12 @@ main()
         return result;
 }
 
+    // Translate 4x4 Matrix
     function createConeModelMatrix(x = 0, y = 0, z = 0, rotationAngle = 0, rotationAxis = [0, 1, 0]) {
         return createTranslationMatrix(x, y, z);
     }
 
+    // Initial Circular Planes
     for (let i = 0; i < segments; i++) {
         const theta = 2 * Math.PI * i / segments;
         const x = r * Math.cos(theta);
@@ -199,6 +201,10 @@ main()
 
     oVStart = vertices.length/3
     console.log(oVStart)
+
+    // In the Cone's Surface and Base, I create triangles. Each triangle on the cone goes from the apex, to the polar coordinate, then to the next polar coordinate.
+    // This repeats for 2*pi radians.
+    // On the Cone's base, it's the same thing except instead of the apex it starts at the center of the circle.
 
     // Cone's surface
     for (let i = 2; i < 1 + segments; i++) {
@@ -214,13 +220,14 @@ main()
 
     //console.log(pedTopVert)
 
+    // Top Cone Colors
     var colors = [];
     for (var i = 0; i < vertices.length/3; i++) {
         colors.push(0.9, 0, 0.2, 0.6);
     }
     
     
-    // O
+    // O Letter
     //left
     let oOuterLeft = [
         // top left
@@ -233,23 +240,6 @@ main()
         0.0, 0.0, 0.0,
         -0.2, 0.0, 0.0
     ];
-    // let oOuterLeft = [
-    //     // outer left
-    //     -0.2, 0.0, 0.0,
-    //     -0.2, 0.2, 0.0,
-
-    //     // outer top
-    //     -0.2, 0.2, 0.0,
-    //     0.0, 0.2, 0.0,
-
-    //     // outer right
-    //     0.0, 0.2, 0.0,
-    //     0.0, 0.0, 0.0,
-
-    //     // outer bottom
-    //     0.0, 0.0, 0.0,
-    //     -0.2, 0.0, 0.0
-    // ];
     for (let i = 0; i < oOuterLeft.length; i++) {
         if (i % 3 == 1) {
             oOuterLeft[i] += 0.03;
@@ -299,6 +289,7 @@ main()
     //oVCount = vertices.length/3 - oVStart
     oVCount = oOuterLeft.length/3
 
+    // O letter colors
     let oVerticesTotalCount = vertices.length/3 - oVStart
     for (let i = 0; i < oVerticesTotalCount; i++) {
         //left
@@ -322,7 +313,7 @@ main()
     // end O
     
     // R
-    // little O for R
+    // little O for R (duplicated O)
     let x = 0;
     let y = 0.15;
     let z = -0.05;
@@ -335,7 +326,7 @@ main()
         );
     }
 
-    // left leg
+    // left leg (duplicated side of O)
     var rLeftLeg = oOuterBot;
     for (let i = 0; i < rLeftLeg.length; i++) {
         if (i % 3 == 0) {
@@ -350,7 +341,7 @@ main()
         }
     }
 
-    // right leg
+    // right leg (duplicated side of O)
     var rRightLeg = oOuterBot;
     let rightLegXOffset = 0;
     let rightLegYOffset = 0;
@@ -368,6 +359,7 @@ main()
         }
     }
     
+    // Colors of R letter
     rVerticesTotalCount = vertices.length/3 - (oVStart + oVerticesTotalCount);
     for (let i = 0; i < rVerticesTotalCount; i++) {
         //left
@@ -390,6 +382,7 @@ main()
     
     //end R
 
+    // Set JS arrays to Typed Arrays
     var pedTopVert = new Float32Array(vertices);
     var pedTopInd = new Int16Array(indices);
     var pedTopColors = new Float32Array(colors);
@@ -501,6 +494,7 @@ main()
     }
 
     function render() {
+        // user can control brightness + some colors
         gl.clearColor(brightness * color[0], brightness * color[1], brightness * color[2], 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -508,15 +502,16 @@ main()
 
         gl.uniform3fv(thetaLoc, theta);	// Update uniform in vertex shader with new rotation angle
 
+        // if click "Kick Away", kickFlag = true, this unif variable will increment on all positions
         if (kickFlag) {
             for (ax in posOffset) {
                 posOffset[ax] += .01;
             }
         }
-        //console.log(posOffset)
         gl.uniform4fv(posOffsetLoc, posOffset);
 
         // cone1
+        // Top cone is translated and scaled using matrix multiplication and is drawn using indices for simplicity.
         let cone1Translation = createConeModelMatrix(0.0, -0.2, 0);
         let cone1Scaling = createScalingMatrix(0.5, 1, 0.5);
         let cone1Matrix = multiplyMatrices(cone1Translation, cone1Scaling);
@@ -526,12 +521,15 @@ main()
     
         
         // cone2
+        // This cone is a duplicate of the previous, and theta has added + pi to make it upside down on the x axis.
+        // It also has a separate color uniform variable "pedColor" so I could use the duplicate vertices but also have a different color.
         let cone2Matrix = createConeModelMatrix(0, 0, 0);
         gl.uniformMatrix4fv(modelMatrixLocation, false, new Float32Array(cone2Matrix));
         theta[0] += Math.PI;
         gl.uniform3fv(thetaLoc, theta);	// Update uniform in vertex shader with new rotation angle
         gl.uniform4f(pedColorLoc, 0.0, 0.0, 0.0, 0.0);
         gl.drawElements(gl.TRIANGLES, pedTopInd.length, gl.UNSIGNED_SHORT, 0);
+        // reset the theta back to what it was before so everthing else can render okay
         theta[0] -= Math.PI;
         gl.uniform3fv(thetaLoc, theta);	// Update uniform in vertex shader with new rotation angle
 
@@ -557,9 +555,11 @@ main()
         gl.drawArrays(gl.TRIANGLE_FAN, oBotStart, oBotCount);
 
         // R
+        // The R letter is also rotated 45 degrees to the "right" to make it look like it's leaning.
+        
+        // "O" part of R, duplicated from O.
         theta[0] += Math.PI / 4;
         gl.uniform3fv(thetaLoc, theta);	// Update uniform in vertex shader with new rotation angle
-
         let roStart = oBotStart + oBotCount;
         let roCount = oVerticesTotalCount;
         gl.drawArrays(gl.TRIANGLES, roStart, roCount);
@@ -575,10 +575,6 @@ main()
         let rrStart = rlStart + rlCount;
         let rrCount = rRightLeg.length/3;
         gl.drawArrays(gl.TRIANGLES, rrStart, rrCount);
-
-        //theta[0] -= Math.PI / 2;
-        //gl.uniform3fv(thetaLoc, theta);	// Update uniform in vertex shader with new rotation angle
-        // end R
 
         requestAnimationFrame(render);	// Call to browser to refresh display
     }
